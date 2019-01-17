@@ -1,3 +1,5 @@
+// Tyler Anderson twa16
+
 #include <ros/ros.h>
 #include <geometry_msgs/Twist.h>
 //node to send Twist commands to the Simple 2-Dimensional Robot Simulator via cmd_vel
@@ -108,7 +110,7 @@ int main(int argc, char **argv) {
 	twist_cmd.linear.x=-speed; //and move forward again
 
     timer=0.0; //reset the timer
-    while(timer<time_3_sec + time_1_sec) {
+    while(timer<time_3_sec + 1.5) {
           twist_commander.publish(twist_cmd);
           timer+=sample_dt;
           loop_timer.sleep();
@@ -127,12 +129,31 @@ int main(int argc, char **argv) {
 	twist_cmd.linear.x=speed; //and move forward again
 
     timer=0.0; //reset the timer
-    while(timer<time_3_sec*2) {
+    while(timer<time_3_sec*2 + 1.0) {
           twist_commander.publish(twist_cmd);
           timer+=sample_dt;
           loop_timer.sleep();
           }
 
+
+    twist_cmd.linear.x=0.0; 
+    twist_cmd.angular.z=-yaw_rate;
+	timer=0.0; //reset the timer
+    while(timer<time_3_sec) {
+          twist_commander.publish(twist_cmd);
+          timer+=sample_dt;
+          loop_timer.sleep();
+          }
+
+    twist_cmd.angular.z=0.0; //and stop spinning in place
+	twist_cmd.linear.x=-speed; //and move forward again
+
+    timer=0.0; //reset the timer
+    while(timer<time_3_sec) {
+          twist_commander.publish(twist_cmd);
+          timer+=sample_dt;
+          loop_timer.sleep();
+          }
 
 
 	//halt the motion
