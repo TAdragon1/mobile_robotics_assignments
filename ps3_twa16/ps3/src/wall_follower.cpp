@@ -205,7 +205,13 @@ int main(int argc, char **argv) {
         if ((g_radius_min < WALL_FOLLOW_RADIUS) && (g_index_min_dist_ping < g_index_tangent_left)) {
             ROS_WARN("blocked ahead");
             ROS_WARN("min ping dist = %f at index %d", g_radius_min, g_index_min_dist_ping);
-            //TODO add something to back up or whatnot to allow robot to continue
+            
+			//TODO add something to back up or whatnot to allow robot to continue
+			twist_cmd.linear.x = -SPEED;
+			twist_commander.publish(twist_cmd);
+
+			ros::spinOnce();
+			loop_timer.sleep();
 
         } 
         else if (g_clearance_tan_test > WALL_FOLLOW_RADIUS) {
