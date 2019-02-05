@@ -1,3 +1,5 @@
+//  Tyler Anderson
+
 #include <ros/ros.h>
 #include <geometry_msgs/Twist.h>
 #include <std_msgs/Bool.h> // boolean message
@@ -13,8 +15,8 @@ nav_msgs::Odometry g_odom; //odom is not actually used in this code, but could b
 const double WALL_FOLLOW_RADIUS = 0.35;
 
 //some timing constants
-const double SPEED = 0.6; //0.6; //0.3; // m/s speed command
-const double YAW_RATE = 0.1; //0.3; //0.1; // rad/sec yaw rate command
+const double SPEED = 0.9; //0.6; //0.3; // m/s speed command
+const double YAW_RATE = 0.3; //0.3; //0.1; // rad/sec yaw rate command
 const double SAMPLE_DT = 0.01; //specify a sample period of 10ms  
 
 //crude tangent approx/look-ahead: pi/2 -0.2 rad from front, i.e.
@@ -206,20 +208,13 @@ int main(int argc, char **argv) {
         }
         if ((g_radius_min < WALL_FOLLOW_RADIUS) && (g_index_min_dist_ping < g_index_tangent_left)) {
 			//closest ping closer than WALL_FOLLOW_RADIUS
-			//AND the ping is in front or to the right of the robot            
+			//AND the ping is in front or to the right of the robot   
             ROS_WARN("blocked ahead");
             ROS_WARN("min ping dist = %f at index %d", g_radius_min, g_index_min_dist_ping);
-            
-			//TODO add something to back up or whatnot to allow robot to continue
-            /*
-			twist_cmd.linear.x = -SPEED;
+            //halt since blocked, should rotate to be on left side, will be caught next time through the loop        
+            twist_cmd.linear.x = 0.0;
             twist_cmd.angular.z = 0.0;
-			twist_commander.publish(twist_cmd);
-
-			ros::spinOnce();
-			loop_timer.sleep();
-            */
-
+            twist_commander.publish(twist_cmd);
         } 
         else if (g_clearance_tan_test > WALL_FOLLOW_RADIUS) {
         	//closest ping outside of follow distance
@@ -239,14 +234,24 @@ int main(int argc, char **argv) {
                 ROS_INFO("CLEARANCE TEST dist = %f", g_clearance_tan_test);
                 //getting stuck in this loop when it can't move forward any more
                 if (g_radius_min < WALL_FOLLOW_RADIUS){
+                    //now just need to rotate so wall is on left side, caught next iteration through outisde loop
                 	break;
                 }
             }
-            ROS_INFO("reconnected to wall on left");
+
+            ROS_INFO("reconnected to wall");
             ROS_INFO("clearance to left, and clearance ahead left: %f, %f", g_radius_left, g_clearance_tan_test);
             ROS_INFO("moving forward:");
-            twist_cmd.linear.x = SPEED; //command to move forward
-            twist_cmd.angular.z = 0.0;
+            if (g_index_min_dist_ping < g_index_tangent_left){
+                twist_cmd.linear.x = SPEED; //command to move forward
+                twist_cmd.angular.z = 0.0;
+            }
+            else{
+                twist_cmd.linear.x = g_radius_left*YAW_RATE; 
+                twist_cmd.angular.z = YAW_RATE;
+            }
+            twist_commander.publish(twist_cmd);
+            ros::spinOnce();
         }
 
     } //loop forever
