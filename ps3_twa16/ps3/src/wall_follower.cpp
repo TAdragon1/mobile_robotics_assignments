@@ -226,30 +226,38 @@ int main(int argc, char **argv) {
             twist_commander.publish(twist_cmd);
 
             while (g_clearance_tan_test > WALL_FOLLOW_RADIUS) {
+                if (g_radius_min < WALL_FOLLOW_RADIUS){
+                    //now just need to rotate so wall is on left side, caught next iteration through outisde loop
+                    break;
+                }
             	//loop until you find a close enough ping
                 ROS_WARN("trying to reconnect to wall w/ circular trajectory");
                 ros::spinOnce();
                 loop_timer.sleep();
-                ROS_INFO("MIN_PING dist = %f", g_radius_min);
-                ROS_INFO("CLEARANCE TEST dist = %f", g_clearance_tan_test);
-                //getting stuck in this loop when it can't move forward any more
-                if (g_radius_min < WALL_FOLLOW_RADIUS){
-                    //now just need to rotate so wall is on left side, caught next iteration through outisde loop
-                	break;
-                }
             }
 
             ROS_INFO("reconnected to wall");
-            ROS_INFO("clearance to left, and clearance ahead left: %f, %f", g_radius_left, g_clearance_tan_test);
             ROS_INFO("moving forward:");
-            if (g_index_min_dist_ping < g_index_tangent_left){
+            ROS_INFO("clearance to left, and clearance ahead left: %f, %f", g_radius_left, g_clearance_tan_test);
+            ROS_INFO("g_radius_min = %f, g_index_min_dist_ping = %d", g_radius_min, g_index_min_dist_ping);
+            
+            twist_cmd.linear.x = SPEED; //command to move forward
+            twist_cmd.angular.z = 0.0;
+
+            /*if (g_index_min_dist_ping < g_index_tangent_left){
                 twist_cmd.linear.x = SPEED; //command to move forward
                 twist_cmd.angular.z = 0.0;
             }
             else{
+                // -- sometimes gets stuck here
+                //g_index_min_dist_ping >= g_index_tangent_left
+                ROS_ERROR("ELSE CASE");
+                
                 twist_cmd.linear.x = g_radius_left*YAW_RATE; 
                 twist_cmd.angular.z = YAW_RATE;
-            }
+
+            }*/
+            
             twist_commander.publish(twist_cmd);
             ros::spinOnce();
         }
