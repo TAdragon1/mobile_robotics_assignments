@@ -205,6 +205,8 @@ int main(int argc, char **argv) {
             loop_timer.sleep();
         }
         if ((g_radius_min < WALL_FOLLOW_RADIUS) && (g_index_min_dist_ping < g_index_tangent_left)) {
+			//closest ping closer than WALL_FOLLOW_RADIUS
+			//AND the ping is in front or to the right of the robot            
             ROS_WARN("blocked ahead");
             ROS_WARN("min ping dist = %f at index %d", g_radius_min, g_index_min_dist_ping);
             
@@ -220,6 +222,7 @@ int main(int argc, char **argv) {
 
         } 
         else if (g_clearance_tan_test > WALL_FOLLOW_RADIUS) {
+        	//closest ping outside of follow distance
             //if the test ping (fwd from left side) is no longer within follower radius, go hunting for it
             // by making a circular-arc left turn
             ROS_WARN("lost fwd test ping...turning left");
@@ -228,14 +231,16 @@ int main(int argc, char **argv) {
             twist_commander.publish(twist_cmd);
 
             while (g_clearance_tan_test > WALL_FOLLOW_RADIUS) {
+            	//loop until you find a close enough ping
                 ROS_WARN("trying to reconnect to wall w/ circular trajectory");
                 ros::spinOnce();
                 loop_timer.sleep();
-                ROS_INFO("PING dist = %f", g_radius_min);
-                //TODO FIX GETTING STUCK HERE
-                /*if (g_radius_min < ){
-
-                }*/
+                ROS_INFO("MIN_PING dist = %f", g_radius_min);
+                ROS_INFO("CLEARANCE TEST dist = %f", g_clearance_tan_test);
+                //getting stuck in this loop when it can't move forward any more
+                if (g_radius_min < WALL_FOLLOW_RADIUS){
+                	break;
+                }
             }
             ROS_INFO("reconnected to wall on left");
             ROS_INFO("clearance to left, and clearance ahead left: %f, %f", g_radius_left, g_clearance_tan_test);
