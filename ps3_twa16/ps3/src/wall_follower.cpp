@@ -244,20 +244,6 @@ int main(int argc, char **argv) {
             twist_cmd.linear.x = SPEED; //command to move forward
             twist_cmd.angular.z = 0.0;
 
-            /*if (g_index_min_dist_ping < g_index_tangent_left){
-                twist_cmd.linear.x = SPEED; //command to move forward
-                twist_cmd.angular.z = 0.0;
-            }
-            else{
-                // -- sometimes gets stuck here
-                //g_index_min_dist_ping >= g_index_tangent_left
-                ROS_ERROR("ELSE CASE");
-                
-                twist_cmd.linear.x = g_radius_left*YAW_RATE; 
-                twist_cmd.angular.z = YAW_RATE;
-
-            }*/
-            
             twist_commander.publish(twist_cmd);
             ros::spinOnce();
         }
