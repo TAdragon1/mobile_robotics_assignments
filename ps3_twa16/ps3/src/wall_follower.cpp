@@ -14,7 +14,7 @@ const double WALL_FOLLOW_RADIUS = 0.35;
 
 //some timing constants
 const double SPEED = 0.6; //0.6; //0.3; // m/s speed command
-const double YAW_RATE = 0.3; //0.3; //0.1; // rad/sec yaw rate command
+const double YAW_RATE = 0.1; //0.3; //0.1; // rad/sec yaw rate command
 const double SAMPLE_DT = 0.01; //specify a sample period of 10ms  
 
 //crude tangent approx/look-ahead: pi/2 -0.2 rad from front, i.e.
@@ -166,6 +166,7 @@ int main(int argc, char **argv) {
         if ((g_radius_min < WALL_FOLLOW_RADIUS) && (g_index_min_dist_ping < g_index_tangent_left)) {
             //if here, then there is a ping closer than left wall; rotate to make this min-dist ping on left
             twist_cmd.linear.x = 0; //halt
+            twist_cmd.angular.z = 0.0;
             twist_commander.publish(twist_cmd);
             ROS_WARN("barrier ahead; need to spin");
             ROS_WARN("min ping dist = %f at index %d", g_radius_min, g_index_min_dist_ping);
@@ -192,6 +193,7 @@ int main(int argc, char **argv) {
         //should have clearance on left, as well as slightly forward from there, on left
         ROS_INFO("tangent test clearance = %f", g_clearance_tan_test);
         twist_cmd.linear.x = SPEED;
+        twist_cmd.angular.z = 0.0;
         ROS_INFO("clearance to left, and clearance ahead left: %f, %f", g_radius_left, g_clearance_tan_test);
         twist_commander.publish(twist_cmd);
         while ((g_clearance_tan_test < WALL_FOLLOW_RADIUS) && (g_index_min_dist_ping >= g_index_tangent_left)) {
@@ -207,11 +209,14 @@ int main(int argc, char **argv) {
             ROS_WARN("min ping dist = %f at index %d", g_radius_min, g_index_min_dist_ping);
             
 			//TODO add something to back up or whatnot to allow robot to continue
+            /*
 			twist_cmd.linear.x = -SPEED;
+            twist_cmd.angular.z = 0.0;
 			twist_commander.publish(twist_cmd);
 
 			ros::spinOnce();
 			loop_timer.sleep();
+            */
 
         } 
         else if (g_clearance_tan_test > WALL_FOLLOW_RADIUS) {
@@ -226,6 +231,11 @@ int main(int argc, char **argv) {
                 ROS_WARN("trying to reconnect to wall w/ circular trajectory");
                 ros::spinOnce();
                 loop_timer.sleep();
+                ROS_INFO("PING dist = %f", g_radius_min);
+                //TODO FIX GETTING STUCK HERE
+                /*if (g_radius_min < ){
+
+                }*/
             }
             ROS_INFO("reconnected to wall on left");
             ROS_INFO("clearance to left, and clearance ahead left: %f, %f", g_radius_left, g_clearance_tan_test);
