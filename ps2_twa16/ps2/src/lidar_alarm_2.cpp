@@ -18,8 +18,10 @@ a different approach would be a circuar arc in front of the robot with a box for
 #include <sensor_msgs/LaserScan.h>
 #include <std_msgs/Float32.h> //Including the Float32 class from std_msgs
 #include <std_msgs/Bool.h> // boolean message 
+#include <std_srvs/Trigger.h>
 
-const double MIN_SAFE_DISTANCE = 0.50; // set alarm if anything is within 0.5m of the front of robot
+const double MIN_SAFE_DISTANCE = 2.0; //give space for calculation and 1m for estop application
+const double inf = std::numeric_limits<double>::infinity();
 
 // these values to be set within the laser callback
 float ping_dist_in_front_ = 3.0; // global var to hold length of a SINGLE LIDAR ping--in front
@@ -36,10 +38,13 @@ double ping_angle_front_ = 0.0;
 double ping_angle_left_ = 0.0;
 double ping_angle_right_ = 0.0;
 bool laser_alarm_ = false;
-
+bool estopped;
 
 ros::Publisher lidar_alarm_publisher_;
 ros::Publisher lidar_dist_publisher_;
+ros::ServiceClient estop_client_;
+std_srvs::Trigger srv_;
+
 // really, do NOT want to depend on a single ping.  Should consider a subset of pings
 // to improve reliability and avoid false alarms or failure to see an obstacle
 
@@ -76,53 +81,50 @@ void laserCallback(const sensor_msgs::LaserScan& laser_scan) {
         ROS_INFO("Angle of straight left = %f", ping_angle_left_);              //1.572369
         ROS_INFO("Angle of straight right = %f", ping_angle_right_);            //-1.566079
 
+        estopped = false;;
     }
 
     laser_alarm_=false;
 
     int start_index = 1 + (int) ((-(M_PI/6.0) - angle_min_)/angle_increment_);  //250
-    ROS_INFO("index of start = %d", start_index);  
+    //ROS_INFO("index of start = %d", start_index);  
 
     int end_index = 1 + (int) (((M_PI/6.0) - angle_min_)/angle_increment_);     //417
-    ROS_INFO("index of start = %d", end_index);  
+    //ROS_INFO("index of start = %d", end_index);  
 
     //check for obstacles
 
     for(int i = start_index; i < end_index; i++){
-        if(laser_scan.ranges[i] < MIN_SAFE_DISTANCE){
+        if(laser_scan.ranges[i] != -inf && laser_scan.ranges[i] < MIN_SAFE_DISTANCE){
             ROS_WARN("MAIN/FRONT: DANGER, WILL ROBINSON!!");
             laser_alarm_=true;
         }
     }
 
     for(int j = ping_index_90deg_right; j < start_index; j++){
-        if(laser_scan.ranges[j] < MIN_SAFE_DISTANCE/2.0){
+        if(laser_scan.ranges[j] != -inf && laser_scan.ranges[j] < MIN_SAFE_DISTANCE/2.0){
             ROS_WARN("RIGHT: DANGER, WILL ROBINSON!!");
             laser_alarm_=true;
         }
     }
 
     for(int k = end_index; k < ping_index_90deg_left; k++){
-        if(laser_scan.ranges[k] < MIN_SAFE_DISTANCE/2.0){
+        if(laser_scan.ranges[k] != -inf && laser_scan.ranges[k] < MIN_SAFE_DISTANCE/2.0){
             ROS_WARN("LEFT: DANGER, WILL ROBINSON!!");
             laser_alarm_=true;
         }
     }
 
-    /*
-    ping_dist_in_front_ = laser_scan.ranges[ping_index_front_];
-    ROS_INFO("ping dist in front = %f",ping_dist_in_front_);
-    if (ping_dist_in_front_<MIN_SAFE_DISTANCE) {
-        ROS_WARN("DANGER, WILL ROBINSON!!");
-        laser_alarm_=true;
+
+    if(laser_alarm_ && !estopped){
+        estop_client_.call(srv_);
+        ROS_WARN("Calling estop!");
+        estopped = true;
     }
-    else {
-        laser_alarm_=false;
+    else if(estopped){
+        //call clear estop
+        ROS_INFO("Call clear estop.");
     }
-    */
-
-
-
 
     std_msgs::Bool lidar_alarm_msg;
     lidar_alarm_msg.data = laser_alarm_;
@@ -140,7 +142,11 @@ int main(int argc, char **argv) {
     lidar_alarm_publisher_ = pub; // let's make this global, so callback can use it
     ros::Publisher pub2 = nh.advertise<std_msgs::Float32>("lidar_dist", 1);  
     lidar_dist_publisher_ = pub2;
-    ros::Subscriber lidar_subscriber = nh.subscribe("robot0/laser_0", 1, laserCallback);
+    ros::Subscriber lidar_subscriber = nh.subscribe("/scan", 1, laserCallback);
+    ros::ServiceClient client = nh.serviceClient<std_srvs::Trigger>("estop_service");
+    estop_client_ = client;
+    std_srvs::Trigger srv;
+    srv_ = srv;
     ros::spin(); //this is essentially a "while(1)" statement, except it
     // forces refreshing wakeups upon new data arrival
     // main program essentially hangs here, but it must stay alive to keep the callback function alive
